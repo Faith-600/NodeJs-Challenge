@@ -49,7 +49,7 @@ app.post('/start-exam', async (req, res) => {
 // Answering a question
 app.post('/answer', async (req, res) => {
   const { sessionId, questionId, answer } = req.body;
-  const EXAM_DURATION_MS = 10 * 60 * 1000; // 10 minutes
+  const EXAM_DURATION_MS = 10 * 60 * 1000; 
 
   // Basic input validation
   if (!sessionId || !questionId || !answer) {
@@ -109,7 +109,15 @@ app.post('/answer', async (req, res) => {
         ...finalResult,
       });
     }
-  } catch (error) {
+ } catch (error) {
+   if (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as any).code === '23505'
+  ) {
+    return res.status(409).send({ message: 'This question has already been answered.' });
+  }
     console.error('Error processing answer:', error);
     res.status(500).send({ message: 'Internal Server Error' });
   }
