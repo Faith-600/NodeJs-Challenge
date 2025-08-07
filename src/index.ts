@@ -39,6 +39,7 @@ app.post('/start-exam', async (req, res) => {
   }
 });
 
+//  ENDPOINT FOR RECOVERY 
 
 app.get('/exam-status/:sessionId', async (req, res) => {
   const { sessionId } = req.params;
@@ -78,8 +79,6 @@ app.get('/exam-status/:sessionId', async (req, res) => {
     }
 
     if (!nextQuestion) {
-      // This can happen if they answered the last question, but the exam wasn't graded for some reason.
-      // In this case, we can probably tell them it's finished.
       return res.status(200).send({ message: 'All questions have been answered. The exam is complete.' });
     }
 
@@ -126,19 +125,17 @@ app.post('/answer', async (req, res) => {
     }
 
     //  Saving the Answer 
-    // We can add a check here to prevent answering the same question twice if we want
+
     await query(
       'INSERT INTO exam_answers (session_id, question_id, submitted_answer) VALUES ($1, $2, $3)',
       [sessionId, questionId, answer]
     );
 
-    //  Checking if Exam is Over 
     const answerCountResult = await query('SELECT COUNT(*) FROM exam_answers WHERE session_id = $1', [sessionId]);
     const answeredQuestions = parseInt(answerCountResult.rows[0].count, 10);
 
     const TOTAL_QUESTIONS = 10;
     if (answeredQuestions < TOTAL_QUESTIONS) {
-      //  Getting the Next Question
       const nextQuestionResult = await query(
         'SELECT id, text, options FROM questions WHERE id > $1 ORDER BY id ASC LIMIT 1',
         [questionId]
@@ -149,7 +146,6 @@ app.post('/answer', async (req, res) => {
         nextQuestion: nextQuestion,
       });
     } else {
-      //  All questions answered, Grade and Finish 
       const finalResult = await gradeAndFinishExam(sessionId);
       return res.status(200).send({
         message: 'Congratulations! You have completed the exam.',
@@ -170,12 +166,12 @@ app.post('/answer', async (req, res) => {
   }
 });
 
+
 //  Function for Grading 
+
 async function gradeAndFinishExam(sessionId: number) {
-  // Marking the exam as finished
   await query('UPDATE exam_sessions SET is_finished = TRUE WHERE id = $1', [sessionId]);
 
-  // Get all correct answers and submitted answers for this session
   const gradingResult = await query(
     `SELECT q.correct_answer, ea.submitted_answer
      FROM exam_answers ea
@@ -213,5 +209,5 @@ async function gradeAndFinishExam(sessionId: number) {
 
 
 app.listen(port, () => {
-  console.log(`🚀 Server is running on http://localhost:${port}`);
+  console.log(`Server is running on http://localhost:${port}`);
 });

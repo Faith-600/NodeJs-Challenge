@@ -1,16 +1,15 @@
 
 
--- Drop tables if they exist to start fresh
+--  Drop tables if they exist to start fresh
 DROP TABLE IF EXISTS exam_answers;
 DROP TABLE IF EXISTS exam_sessions;
 DROP TABLE IF EXISTS questions;
 
--- Table to store the question bank
+--  Table to store the question bank
 CREATE TABLE questions (
     id SERIAL PRIMARY KEY,
     text TEXT NOT NULL,
     options JSONB NOT NULL,
-    -- We're storing the correct key ('A', 'B', etc.) for easy checking
     correct_answer CHAR(1) NOT NULL
 );
 
@@ -29,7 +28,6 @@ CREATE TABLE exam_answers (
     submitted_answer CHAR(1) NOT NULL
 );
 
--- Let's seed our 10 questions!
 INSERT INTO questions (text, options, correct_answer) VALUES
 ('What does `console.log` do in JavaScript?', '{"A": "Logs a message to the web console", "B": "Creates a new variable", "C": "Styles a component", "D": "Imports a library", "E": "None of the above"}', 'A'),
 ('Which of the following is NOT a primitive type in TypeScript?', '{"A": "string", "B": "number", "C": "boolean", "D": "array", "E": "null"}', 'D'),
