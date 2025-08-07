@@ -18,19 +18,16 @@ app.get('/health', (req, res) => {
 
 app.post('/start-exam', async (req, res) => {
   try {
-    // Create a new session in the database
     const sessionResult = await query(
       'INSERT INTO exam_sessions DEFAULT VALUES RETURNING id, start_time'
     );
     const session = sessionResult.rows[0];
 
-    // Fetch the very first question
     const questionResult = await query(
       'SELECT id, text, options FROM questions ORDER BY id ASC LIMIT 1'
     );
     const firstQuestion = questionResult.rows[0];
 
-    // Send the response back to the user
     res.status(201).send({
       message: 'Exam started!',
       sessionId: session.id,
@@ -43,21 +40,72 @@ app.post('/start-exam', async (req, res) => {
 });
 
 
+app.get('/exam-status/:sessionId', async (req, res) => {
+  const { sessionId } = req.params;
+
+  try {
+    const sessionResult = await query(
+      'SELECT id, is_finished FROM exam_sessions WHERE id = $1',
+      [sessionId]
+    );
+
+    if (sessionResult.rows.length === 0) {
+      return res.status(404).send({ message: 'Exam session not found.' });
+    }
+    if (sessionResult.rows[0].is_finished) {
+      return res.status(403).send({ message: 'This exam has already been completed.' });
+    }
+
+    const lastAnswerResult = await query(
+      'SELECT question_id FROM exam_answers WHERE session_id = $1 ORDER BY question_id DESC LIMIT 1',
+      [sessionId]
+    );
+
+    let nextQuestion;
+
+    if (lastAnswerResult.rows.length > 0) {
+      const lastQuestionId = lastAnswerResult.rows[0].question_id;
+      const nextQuestionResult = await query(
+        'SELECT id, text, options FROM questions WHERE id > $1 ORDER BY id ASC LIMIT 1',
+        [lastQuestionId]
+      );
+      nextQuestion = nextQuestionResult.rows[0];
+    } else {
+      const firstQuestionResult = await query(
+        'SELECT id, text, options FROM questions ORDER BY id ASC LIMIT 1'
+      );
+      nextQuestion = firstQuestionResult.rows[0];
+    }
+
+    if (!nextQuestion) {
+      // This can happen if they answered the last question, but the exam wasn't graded for some reason.
+      // In this case, we can probably tell them it's finished.
+      return res.status(200).send({ message: 'All questions have been answered. The exam is complete.' });
+    }
+
+    return res.status(200).send({
+      message: 'Successfully retrieved current exam state.',
+      nextQuestion: nextQuestion,
+    });
+
+  } catch (error) {
+    console.error('Error fetching exam status:', error);
+    return res.status(500).send({ message: 'Internal Server Error' });
+  }
+});
+
+
 // Post-Answer End-point
 
-
-// Answering a question
 app.post('/answer', async (req, res) => {
   const { sessionId, questionId, answer } = req.body;
   const EXAM_DURATION_MS = 10 * 60 * 1000; 
 
-  // Basic input validation
   if (!sessionId || !questionId || !answer) {
     return res.status(400).send({ message: 'Missing required fields: sessionId, questionId, answer.' });
   }
 
   try {
-    // --- 1. Check Session and Timeout ---
     const sessionResult = await query('SELECT start_time, is_finished FROM exam_sessions WHERE id = $1', [sessionId]);
     if (sessionResult.rows.length === 0) {
       return res.status(404).send({ message: 'Exam session not found.' });
@@ -70,7 +118,6 @@ app.post('/answer', async (req, res) => {
 
     const elapsedTime = Date.now() - new Date(session.start_time).getTime();
     if (elapsedTime > EXAM_DURATION_MS) {
-      // If time is up, grade whatever they have and end the exam.
       const finalResult = await gradeAndFinishExam(sessionId);
       return res.status(408).send({
         message: 'Time limit exceeded. Exam has ended.',
