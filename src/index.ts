@@ -119,7 +119,7 @@ app.post('/answer', async (req, res) => {
     return res.status(409).send({ message: 'This question has already been answered.' });
   }
     console.error('Error processing answer:', error);
-    res.status(500).send({ message: 'Internal Server Error' });
+    return res.status(500).send({ message: 'Internal Server Error' });
   }
 });
 
