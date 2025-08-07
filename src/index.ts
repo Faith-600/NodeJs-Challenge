@@ -9,7 +9,7 @@ const port = process.env.PORT || 3000;
 
 app.use(express.json());
 
-app.get('/health', (req, res) => {
+app.get('/test', (req, res) => {
   res.status(200).send({ status: 'ok' });
 });
 
