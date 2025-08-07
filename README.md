@@ -2,6 +2,11 @@
 This project is my solution for the Node.js Take-Home Challenge. It's a RESTful API built with TypeScript, Express, and a PostgreSQL database hosted on Supabase, simulating a simple time-limited exam.
 
 
+ ## Live Demo
+This API is deployed and available to test live.
+# Base URL: https://demo-exam.onrender.com
+You can use this base URL with Postman to test all the endpoints described below.
+
 ## Key Features
 1. Timed Sessions: Each exam starts a 10-minute timer, managed on the server.
 2. Stateless Application: All session and answer state is stored in the database, allowing the API to be scaled or restarted without data loss.
